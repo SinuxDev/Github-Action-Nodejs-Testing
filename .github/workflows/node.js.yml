@@ -1,6 +1,7 @@
-name: Node.js CI
+name: Node.js CI + Auto PR + Merge
 
 on:
+  workflow_dispatch:
   push:
     branches: ["master"]
   pull_request:
@@ -19,14 +20,52 @@ jobs:
         node-version: [18.x, 20.x, 22.x]
 
     steps:
+      # 1️⃣ Checkout code
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
+      # 2️⃣ Setup Node.js
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
 
+      # 3️⃣ Install dependencies
       - run: npm ci
+
+      # 4️⃣ Build if present
       - run: npm run build --if-present
+
+      # 5️⃣ Run tests
       - run: npm test
+
+      # 6️⃣ Create new branch for testing
+      - name: Create test branch
+        id: create_branch # give this step an id
+        run: |
+          git config user.name "SinuxDev"
+          git config user.email "aung.atg1738@gmail.com"
+          TEST_BRANCH="test-branch-$(date +%s)"
+          git checkout -b $TEST_BRANCH
+          git commit --allow-empty -m "Test branch for CI"
+          git push origin $TEST_BRANCH
+          echo "branch_name=$TEST_BRANCH" >> $GITHUB_OUTPUT
+
+      # 7️⃣ Create Pull Request
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.create_branch.outputs.branch_name }}
+          base: master
+          title: "Automated PR: Test Branch"
+          body: "This PR was created automatically for testing Node.js CI."
+
+      # 8️⃣ Auto-merge if PR passes
+      - name: Auto-merge PR
+        uses: pascalgn/automerge-action@v0.15.4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          merge_method: squash
