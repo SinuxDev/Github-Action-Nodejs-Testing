@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo with full history
+      # 1️⃣ Checkout repo with full history and push permissions
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: true
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }} # PAT with repo write access
 
       # 2️⃣ Setup Node.js
       - uses: actions/setup-node@v4
@@ -32,12 +32,18 @@ jobs:
       # 5️⃣ Run tests
       - run: npm test
 
+      # 6️⃣ Make automated changes and commit
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          # Example: update a file with timestamp
           echo "Updated at $(date)" > last-update.txt
           git add last-update.txt
-          git commit -m "Automated update from CI" || echo "No changes to commit"
+
+          # Commit only if there are changes, include [skip ci] to prevent recursive triggers
+          git commit -m "Automated update from CI [skip ci]" || echo "No changes to commit"
+
+          # Push to master
           git push origin master
