@@ -45,8 +45,8 @@ jobs:
       - name: Create test branch
         id: create_branch # give this step an id
         run: |
-          git config user.name "SinuxDev"
-          git config user.email "aung.atg1738@gmail.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           TEST_BRANCH="test-branch-$(date +%s)"
           git checkout -b $TEST_BRANCH
           git commit --allow-empty -m "Test branch for CI"
