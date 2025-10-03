@@ -1,30 +1,23 @@
-name: Node.js CI + Auto PR + Merge
+name: Node.js CI + Push to Master
 
 on:
   workflow_dispatch: # manual trigger
   push:
     branches: ["master"]
-  pull_request:
-    branches: ["master"]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
 
 jobs:
-  build-and-pr:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repository with push permissions
+      # 1️⃣ Checkout repo with full history
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: true # allows git push using the auto token
+          persist-credentials: true
 
       # 2️⃣ Setup Node.js
-      - name: Use Node.js 18.x
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 18.x
           cache: "npm"
@@ -38,38 +31,15 @@ jobs:
       # 5️⃣ Run tests
       - run: npm test
 
-      # 6️⃣ Create a new branch for PR
-      - name: Create test branch
-        id: create_branch
+      # 6️⃣ Make changes and commit (optional)
+      - name: Commit changes
         run: |
-          # Set Git identity for the commit
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Create a branch with timestamp
-          TEST_BRANCH="test-branch-$(date +%s)"
-          git checkout -b $TEST_BRANCH
-          git commit --allow-empty -m "Test branch for CI"
+          # Example: create/update a file
+          echo "Updated at $(date)" > last-update.txt
+          git add last-update.txt
 
-          # Push branch
-          git push origin $TEST_BRANCH
-
-          # Pass branch name to next step
-          echo "branch_name=$TEST_BRANCH" >> $GITHUB_OUTPUT
-
-      # 7️⃣ Create Pull Request
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ github.token }} # auto-provided in public repos
-          branch: ${{ steps.create_branch.outputs.branch_name }}
-          base: master
-          title: "Automated PR: Test Branch"
-          body: "This PR was created automatically for testing Node.js CI."
-
-      # 8️⃣ Auto-merge PR if CI passes
-      - name: Auto-merge PR
-        uses: pascalgn/automerge-action@v0.15.4
-        with:
-          github_token: ${{ github.token }}
-          merge_method: squash
+          git commit -m "Automated update from CI" || echo "No changes to commit"
+          git push origin master
