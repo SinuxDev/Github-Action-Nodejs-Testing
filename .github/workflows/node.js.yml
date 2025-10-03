@@ -43,10 +43,19 @@ jobs:
       - name: Create test branch
         id: create_branch
         run: |
+          # Set author identity for Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create branch and empty commit
           TEST_BRANCH="test-branch-$(date +%s)"
           git checkout -b $TEST_BRANCH
           git commit --allow-empty -m "Test branch for CI"
+
+          # Push branch
           git push origin $TEST_BRANCH
+
+          # Set output for next step
           echo "branch_name=$TEST_BRANCH" >> $GITHUB_OUTPUT
 
       # 7️⃣ Create a pull request
