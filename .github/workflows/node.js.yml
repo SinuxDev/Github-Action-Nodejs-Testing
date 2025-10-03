@@ -15,6 +15,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: true
+          token: ${{ secrets.PAT_TOKEN }}
 
       # 2️⃣ Setup Node.js
       - uses: actions/setup-node@v4
@@ -31,15 +32,12 @@ jobs:
       # 5️⃣ Run tests
       - run: npm test
 
-      # 6️⃣ Make changes and commit (optional)
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Example: create/update a file
           echo "Updated at $(date)" > last-update.txt
           git add last-update.txt
-
           git commit -m "Automated update from CI" || echo "No changes to commit"
           git push origin master
