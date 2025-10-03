@@ -1,7 +1,7 @@
 name: Node.js CI + Auto PR + Merge
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # manually trigger
   push:
     branches: ["master"]
   pull_request:
@@ -12,24 +12,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-pr:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
-
     steps:
-      # 1️⃣ Checkout code
+      # 1️⃣ Checkout repository with push permissions
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: true # allow git push
+          token: ${{ github.token }} # auto-provided in public repos
 
       # 2️⃣ Setup Node.js
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js 18.x
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 18.x
           cache: "npm"
 
       # 3️⃣ Install dependencies
@@ -41,31 +39,29 @@ jobs:
       # 5️⃣ Run tests
       - run: npm test
 
-      # 6️⃣ Create new branch for testing
+      # 6️⃣ Create a new test branch
       - name: Create test branch
-        id: create_branch # give this step an id
+        id: create_branch
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           TEST_BRANCH="test-branch-$(date +%s)"
           git checkout -b $TEST_BRANCH
           git commit --allow-empty -m "Test branch for CI"
           git push origin $TEST_BRANCH
           echo "branch_name=$TEST_BRANCH" >> $GITHUB_OUTPUT
 
-      # 7️⃣ Create Pull Request
+      # 7️⃣ Create a pull request
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
           branch: ${{ steps.create_branch.outputs.branch_name }}
           base: master
           title: "Automated PR: Test Branch"
           body: "This PR was created automatically for testing Node.js CI."
 
-      # 8️⃣ Auto-merge if PR passes
+      # 8️⃣ Auto-merge the PR if CI passes
       - name: Auto-merge PR
         uses: pascalgn/automerge-action@v0.15.4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ github.token }}
           merge_method: squash
